@@ -1,0 +1,56 @@
+services:
+  frontend:
+    depends_on:
+      - backend
+    image: frontend-dev
+    container_name: frontend-dev # This will name the container todo-front-dev
+    build:
+      context: ./frontend # The context will pick this directory as the "build context"
+      dockerfile: ./dev.Dockerfile # This will simply tell which dockerfile to read
+    volumes:
+      - ./frontend:/usr/src/app
+    ports:
+      - 3000:3000
+    environment:
+      - WATCHPACK_POLLING=true
+      - REACT_APP_BACKEND_URL=http://localhost:8080/graphql
+      - REACT_APP_WS_URL=ws://localhost:8080/graphql
+  backend:
+    depends_on:
+      - mongo
+    image: backend-dev
+    container_name: backend-dev
+    build:
+      context: ./backend
+      dockerfile: ./dev.Dockerfile
+    volumes:
+      - ./backend:/usr/src/app
+    ports:
+      - 4000:4000
+    environment:
+      - MONGODB_URI=mongodb://the_username:the_password@mongo:27017/librarydatabase
+      - JWT_SECRET=192u8d2hr87fh9fehf948q2w7f21q!DWWDGtgreghr223e4
+      - WATCHPACK_POLLING=true
+  mongo:
+    image: mongo
+    ports:
+      - 3456:27017
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+      MONGO_INITDB_DATABASE: librarydatabase
+    volumes:
+      - ./backend/mongo_data:/data/db
+      - ./backend/mongo/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js
+  #  debug-helper:
+  #    image: busybox
+  nginx:
+    depends_on:
+      - frontend
+      - backend
+    image: nginx:1.20.1
+    volumes:
+      - ./nginx.dev.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - 8080:80
+    container_name: reverse-proxy
